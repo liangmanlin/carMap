@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+
+    <style type="text/css">
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <style type="text/css">
+	.infoBoxContent{font-size:12px;}
+	.infoBoxContent .title{background:url(title.jpg) no-repeat;height:30px;width:272px;}
+	.infoBoxContent .title strong{font-size:14px;line-height:42px;padding:0 10px 0 5px;}
+	.infoBoxContent .title .price{color:#FFFF00;}
+	.infoBoxContent .list{width:268px;border:solid 1px #4FA5FC;border-top:none;background:#fff;height:120px;}
+	.infoBoxContent .list ul{margin:0;padding:5px;list-style:none;}
+	.infoBoxContent .list ul li {float:left;width:255px;border-bottom:solid 1px #4FA5FC;padding:2px 0;}
+	.infoBoxContent .list ul .last{border:none;}
+	.infoBoxContent .list ul img{width:53px;height:42px;margin-right:5px;}
+	.infoBoxContent .list ul p{padding:0;margin:0;}
+	.infoBoxContent .left{float:left;}
+	.infoBoxContent .rmb{float:right;color:#EB6100;font-size:14px;font-weight:bold;}
+	.infoBoxContent a{color:#0041D9;text-decoration:none;}
+</style>
+    
+</head>
+<body>
+    <div id="map"></div>
+    <canvas id="canvas"></canvas>
+
+    <script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=FLx5hBbeCCB7mGKjvxFZShixF8LeSPlX"></script>
+    <script type="text/javascript" src="http://mapv.baidu.com/build/mapv.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/library/RichMarker/1.2/src/RichMarker_min.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/library/InfoBox/1.2/src/InfoBox_min.js"></script>
+    <script type="text/javascript" src="/js/My97DatePicker/WdatePicker.js"></script>
+    <script type="text/javascript" src="./js/map_control.js"></script>
+    
+
+    <script type="text/javascript">
+
+        // 百度地图API功能
+        var map = new BMap.Map("map", {
+            enableMapClick: false
+        });    // 创建Map实例
+        map.centerAndZoom(new BMap.Point(113.403492408, 23.1309846168), 13);  // 初始化地图,设置中心点坐标和地图级别
+        map.enableScrollWheelZoom(true); // 开启鼠标滚轮缩放
+
+        // 地图自定义样式
+        var left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
+        var left_navigation = new BMap.NavigationControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
+        map.addControl(left_control);
+        map.addControl(left_navigation);
+        
+        var infoBox;
+        var infobox_close = true;
+        var createbox = false;
+        var createboxing = false;
+        var geoc = new BMap.Geocoder(); 
+        
+        add_control(map);        
+             
+        function make_box(arr,pos){
+        	var newDate = new Date();
+        	newDate.setTime(arr[2]*1000);
+        	var timeStr = newDate.toLocaleString();
+        	infobox_close = false;
+        	if(infobox_close)
+        		return ;
+        	if(createboxing)
+        		return ;
+        	if(createbox)
+        		return ;
+        	createboxing = true;
+        	geoc.getLocation(new BMap.Point(arr[0], arr[1]) , function(rs){
+        		if(infobox_close){
+        			createboxing = false; 
+        			return 0;
+        		}
+        		if(createbox)
+        			return 0;
+        		var addr = rs.address; 
+        		var sup = rs.surroundingPois;
+        		var supview = [];
+        		var len = Math.min(2,sup.length);
+        		if(len > 0){
+        			for(var i=0;i<len;i++){
+        				if(i==0){
+        					supview.push("<p style=\"color:blue;\">"+sup[i].title+"  附近</p>");
+        				}else{
+        					supview.push("<p>"+sup[i].title+"</p>");
+        				}
+        			}
+        		}
+        		var dist = "";
+        		if(arr[3]>0){
+        			dist = "<p>用时："+formatTime(arr[3])+" 里程："+Number(arr[4]).toFixed(2)+" 千米</p>";
+        		}        		       		
+        		var html = ["<div class='infoBoxContent'><div class='title'><strong>节点信息</strong></div>",
+							"<div class='list'><ul><li><div class='left'><p >时间:"+timeStr,
+							"</p><p>",addr,"</p>",supview.join(""),
+							"<p>经度：",rs.point.lng,"</p>",
+							"<p>纬度：",rs.point.lat,"</p></div></li>",
+							dist,"</div>"];
+				infoBox = new BMapLib.InfoBox(map,html.join(""),{
+					boxStyle:{
+						width: "270px"
+						,height: "50px"
+					}
+					,enableAutoPan: false
+					,align: INFOBOX_AT_BOTTOM
+				});	
+				infoBox.open(pos);
+				createbox = true;
+				createboxing = false;        		
+        	});
+        	
+        }
+        
+        function get_data(rm){
+        	var content = rm.getContent(); 
+			re=/id=\"vv\"\s+value=\"([^\"]*)\"/g;
+			re.test(content);		
+			var str = RegExp.$1;
+			var arr = str.split(',');
+			return arr;     	
+        }
+        
+        function mark_point(data,type,m){
+        	m++;
+        	var value = data.join(",");
+        	var point_name = "￥起点";
+        	if(type == 2)
+        		point_name = "￥终点";
+        	else if(type == 3)
+        		point_name = "途径路线";
+        	var html2 = '<div style="z-index: 900;">'
+            	+ '<input type="hidden" id="vv" value="'+value+'" />'
+            	+ '<div style="position: absolute; margin: 0pt; padding: 0pt; width: 80px; height: 26px; left: -10px; top: -35px; overflow: hidden;">'
+                +     '<img id="rm3_image" style="border:none;left:0px; top:0px; position:absolute;" src="back2.png">'
+				+ '</div>'
+				+ '<label class=" BMapLabel" unselectable="on" style="position: absolute; -moz-user-select: none; '
+				+ 'display: inline; cursor: inherit; border: 0px none; padding: 2px 1px 1px; white-space: nowrap; font: 15px arial,simsun; z-index: 900; color: rgb(255, 251, 240); left: 0px; top: -35px;">'+m+'</label>'
+				+ '<label class=" BMapLabel" unselectable="on" style="position: absolute; -moz-user-select: none; '
+				+ 'display: inline; cursor: inherit; border: 0px none; padding: 2px 1px 1px; white-space: nowrap; font: 12px arial,simsun; z-index: 900; color: rgb(255, 102, 0); left: 15px; top: -35px;">'+point_name+'</label></div>',
+      		myRichMarker2 = new BMapLib.RichMarker(html2,  new BMap.Point(data[0], data[1]),{
+                                                  "anchor" : new BMap.Size(0, 0),
+												  "enableDragging" : false});
+			map.addOverlay(myRichMarker2);
+			myRichMarker2.addEventListener("onmouseover", m_over);
+			myRichMarker2.addEventListener("onmouseout", m_out);
+        }
+        
+        function m_over(event){
+        	var mark = event.target;
+        	var arr = get_data(mark)
+			make_box(arr,mark.getPosition());
+        }
+        
+        function m_out(event){
+        	if(infoBox != null)
+				infoBox.close();
+        	infobox_close = true;
+        	createbox = false;
+        	//map.clearOverlays();
+        }
+        
+        function formatTime(second) {
+    		return [parseInt(second / 60 / 60), parseInt(second / 60 % 60), second % 60].join(":").replace(/\b(\d)\b/g, "0$1");
+}
+
+function search(map) {
+    var start = $("#datestart").val();
+    var end = $("#dateend").val();
+	$.get('test.php'+"?start="+start+"&end="+end, function(rs) {
+		map.clearOverlays();
+		if(rs == "")
+			return;
+		var data = [];
+		rs = rs.split("#");
+        for (var m = 0; m < rs.length; m++) {
+        	var coordinates = [];
+        	var timeData = [];
+        	var total = 0;
+			ts = rs[m].split("\n");
+			var len = ts.length;
+			var mid = parseInt(len / 2);
+			for (var i = 0; i < len; i++) {
+				var item = ts[i].split(',');
+				if (item.length < 3) {
+					if (i == len - 1) {
+						item = ts[i - 1].split(',');
+						var tmp = [item[1], item[2], item[0], item[3], item[4]];
+						mark_point(tmp, 2, m);
+					}
+					continue;
+				}
+				var tmp = [item[1], item[2], item[0]];
+				coordinates.push(tmp);
+				total++;
+				timeData.push({
+					geometry: {
+						type: 'Point',
+						coordinates: [item[1], item[2]]
+					},
+					count: 1,
+					time: total
+				});
+				if (i == 0) mark_point(tmp, 1, m);
+				if (i == mid) mark_point(tmp, 3, m);
+				if (i == len - 1) {
+					tmp.push(item[3]);
+					tmp.push(item[4]);
+					mark_point(tmp, 2, m);
+				}
+			}
+		coordinates.sort(function(a, b) {
+			return a[2] - b[2];});
+		if(m==0)
+			map.setCenter(new BMap.Point(coordinates[0][0],coordinates[0][1]));
+		data.push({
+			geometry: {
+				type: 'LineString',
+				coordinates: coordinates
+			}
+		});
+		var dataSet = new mapv.DataSet(data);
+		var options = {
+			zIndex: -5624106,
+			strokeStyle: 'rgba(0,50,255,0.8)',
+			lineWidth: 5.0,
+			draw: 'simple'
+		}
+		var mapvLayer = new mapv.baiduMapLayer(map, dataSet, options);
+		
+		var dataSet2 = new mapv.DataSet(timeData);
+		var options2 = {
+			zIndex: -5624105,
+			fillStyle: 'rgba(0, 50, 250, 1)',
+			globalCompositeOperation: "lighter",
+			size: 2.5,
+			animation: {
+				steps: total,
+				trails: 1,
+				duration: total / 10,
+			},
+			draw: 'simple'
+		}
+		var mapvLayer = new mapv.baiduMapLayer(map, dataSet2, options2);			
+		}		
+	});
+}
+//------------------------------------------------------------------------------------------        
+function add_control(map){
+	// 定义一个控件类,即function
+	function ZoomControl(){
+	  // 默认停靠位置和偏移量
+	  this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+	  this.defaultOffset = new BMap.Size(10, 10);
+	}
+
+	// 通过JavaScript的prototype属性继承于BMap.Control
+	ZoomControl.prototype = new BMap.Control();
+
+	// 自定义控件必须实现自己的initialize方法,并且将控件的DOM元素返回
+	// 在本方法中创建个div元素作为控件的容器,并将其添加到地图容器中
+	ZoomControl.prototype.initialize = function(map){
+	  // 创建一个DOM元素
+	  var div = document.createElement("div");
+        
+      var form = get_form(map);
+      div.appendChild(form);
+	  // 设置样式
+	  div.style.cursor = "pointer";
+	  div.style.border = "1px solid gray";
+	  div.style.backgroundColor = "white";
+	  
+	  // 添加DOM元素到地图中
+	  map.getContainer().appendChild(div);
+	  // 将DOM元素返回
+	  return div;
+	}
+	// 创建控件
+	var myZoomCtrl = new ZoomControl();
+	// 添加到地图当中
+	map.addControl(myZoomCtrl);
+}
+
+function get_form(map){
+	var myDate = new Date();
+	var ds = myDate.getFullYear()+"-"+(myDate.getMonth()+1)+"-"+myDate.getDate();
+    var div = document.createElement("div");
+    div.appendChild(document.createTextNode("开始时间"));
+    div.appendChild(document.createElement("br"));
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "Wdate";
+    input.setAttribute("onfocus","WdatePicker({dateFmt:'yyyy-MM-dd'})");
+    input.id = "datestart";
+    input.name = "datestart";
+    input.value = ds;
+    input.size = "12";
+    div.appendChild(input);
+    div.appendChild(document.createElement("br"));
+    div.appendChild(document.createTextNode("结束时间"));
+    div.appendChild(document.createElement("br"));
+    var input2 = document.createElement("input");
+    input2.type = "text";
+    input2.className = "Wdate";
+    input2.setAttribute("onfocus","WdatePicker({dateFmt:'yyyy-MM-dd'})");
+    input2.id = "dateend";
+    input2.name = "dateend";
+    input2.value = ds;
+    input2.size = "12";
+    div.appendChild(input2);
+    div.appendChild(document.createElement("br"));
+    
+    var button = document.createElement("input");
+    button.type = "button";
+    button.value = "确定";
+    button.style.width = "115px";
+    button.style.height = "24px";
+    button.onclick = function(e){search(map);}
+    div.appendChild(button);
+    
+    return div;
+}        
+        </script>
+</body>
+</html>
