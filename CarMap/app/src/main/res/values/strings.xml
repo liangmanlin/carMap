@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">CarMap</string>
+    <string name="action_settings">Settings</string>
+    <string name="ab_1">10秒</string>
+    <string name="ab_2">15秒</string>
+    <string name="ab_3">20秒</string>
+    <string name="ab_4">30秒</string>
+    <string name="ab_21">30秒</string>
+    <string name="ab_22">60秒</string>
+    <string name="ab_23">90秒</string>
+    <string name="ab_24">120秒</string>
+    <string name="button_set">确认</string>
+    <string name="button_read">读取</string>
+    <string name="view_inv">记录间隔</string>
+    <string name="view_push">上传间隔</string>
+    <string name="pass_world">密码</string>
+    <string name="open">后台轨迹</string>
+    <string name="set_bg">后台运行</string>
+    <string name="unset_bg">退出时关闭</string>
+</resources>
