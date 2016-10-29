@@ -21,7 +21,19 @@ import com.baidu.trace.OnEntityListener;
 import com.baidu.trace.TraceLocation;
 
 import  android.content.BroadcastReceiver;
+import android.os.Message;
 import android.widget.Toast;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class MyService extends Service {
     private static final String TAG = "MyService";
@@ -96,10 +108,10 @@ public class MyService extends Service {
             @Override
             public void run() {
                 checkNetWork();
-                handler.postDelayed(this,10000);
+                handler.postDelayed(this,15000);
             }
         };
-        handler.postDelayed(r,10000);
+        handler.postDelayed(r,15000);
         return super.onStartCommand(intent, START_NOT_STICKY, startId);
     }
 
@@ -261,7 +273,8 @@ public class MyService extends Service {
                 init();
             }
             if(!isSend){
-                SendWXMsg();
+                isSend = true;
+                new Thread(networkTask).start();
             }
             failNet = 0;
         }else{
@@ -274,8 +287,87 @@ public class MyService extends Service {
         }
     }
 
+    private Runnable networkTask = new Runnable() {
+        @Override
+        public void run() {
+            SendWXMsg();
+        }
+    };
+
+//    private Handler mHandler = new Handler() {
+//        @Override
+//        public void handleMessage(Message msg) {
+//            super.handleMessage(msg);
+//            String result = (String) msg.obj;
+//            switch (msg.what) {
+//                case 200:
+//                    //请求成功
+//                    break;
+//                case 404:
+//                    // 请求失败
+//                    isSend = false;
+//                    break;
+//            }
+//
+//        }
+//    };
+
     private void SendWXMsg(){
-        String rul = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN";
+        try {
+            if (getToken()) {
+                String msg = imei+"启动，如非本人操作请注意";
+                String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="+access_token;
+                Map par = new HashMap<String, String>();
+                par.put("touser","manlin");
+                par.put("msgtype","text");
+                par.put("agentid","2");
+                Map p2 = new HashMap<String,String>();
+                p2.put("content",msg);
+                par.put("text",HttpUtils.getRequestData(p2).toString());
+                String strResult=HttpUtils.submitPostData(url,par, "utf-8");
+                Map result = getJson(strResult);
+                if(!result.get("errcode").toString().equals("0")){
+                    isSend = false;
+                }
+//                List<NameValuePair> list = new ArrayList<>();
+//                list.add(new BasicNameValuePair("touser","manlin"));
+//                list.add(new BasicNameValuePair("msgtype","text"));
+//                list.add(new BasicNameValuePair("agentid","2"));
+//                list.add(new BasicNameValuePair("text","{\"content\":\""+msg+"\"}"));
+//                HttpsPostThread thread = new HttpsPostThread(mHandler,url, list, 200);
+//                thread.start();
+            }
+        }catch (JSONException e) {
+            isSend = false;
+        }
+    }
+
+    private boolean getToken() throws JSONException {
+        if(tokenGetTime-100 > ((int)(System.currentTimeMillis()/1000)))
+            return true;
+        String url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=wxc94e5f44d988576b&corpsecret=QR96u-sqZHLw5yUPAYvmGJnNqC1ngpUoEohEXh96C8j_XRdR2qxk7dcIkXTnLd_m";
+        String strResult=HttpUtils.submitPostData(url,new HashMap<String, String>(), "utf-8");
+        Map result = getJson(strResult);
+        if(!result.get("access_token").toString().equals("")){
+            access_token = result.get("access_token").toString();
+            tokenGetTime = (int)(System.currentTimeMillis()/1000)+Integer.parseInt(result.get("expires_in").toString());
+            return true;
+        }
+        return false;
+    }
+
+    private Map getJson(String json) throws JSONException{
+        JSONObject jsonObject = new JSONObject(json);
+        Map result = new HashMap();
+        Iterator iterator = jsonObject.keys();
+        String key = null;
+        String value = null;
+        while (iterator.hasNext()) {
+            key = (String) iterator.next();
+            value = jsonObject.getString(key);
+            result.put(key, value);
+        }
+        return result;
     }
 
 
@@ -312,8 +404,8 @@ public class MyService extends Service {
                     if(bg_type != 1){
                         Toast.makeText(context,"接收到退出消息",Toast.LENGTH_SHORT).show();
                         handler.removeCallbacks(r);
+                        isSend = true;
                         stopTrace();
-                        stopSelf();
                     }
                 }else if(type == 4){
                     stopTrace();

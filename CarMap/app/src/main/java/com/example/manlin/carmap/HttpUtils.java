@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.io.ByteArrayOutputStream;
 
+import javax.net.ssl.HttpsURLConnection;
+
 public class HttpUtils {
     /*
      * Function  :   发送Post请求到服务器
@@ -16,10 +18,10 @@ public class HttpUtils {
      */
     public static String submitPostData(String strUrlPath,Map<String, String> params, String encode) {
 
-        byte[] data = getRequestData(params, encode).toString().getBytes();//获得请求体
+        byte[] data = getRequestData(params).toString().getBytes();//获得请求体
         try {
 
-            //String urlPath = "http://192.168.1.9:80/JJKSms/RecSms.php"; 
+            //String urlPath = "http://192.168.1.9:80/JJKSms/RecSms.php";
             URL url = new URL(strUrlPath);
 
             HttpURLConnection httpURLConnection = (HttpURLConnection)url.openConnection();
@@ -52,20 +54,27 @@ public class HttpUtils {
      * Function  :   封装请求体信息
      * Param     :   params请求体内容，encode编码格式
      */
-    public static StringBuffer getRequestData(Map<String, String> params, String encode) {
+    public static StringBuffer getRequestData(Map<String, String> params) {
         StringBuffer stringBuffer = new StringBuffer();        //存储封装好的请求体信息
+        stringBuffer.append("{");
         try {
             for(Map.Entry<String, String> entry : params.entrySet()) {
-                stringBuffer.append(entry.getKey())
-                        .append("=")
-                        .append(URLEncoder.encode(entry.getValue(), encode))
-                        .append("&");
+                stringBuffer.append("\""+entry.getKey()+"\"")
+                        .append(":")
+                        .append(valStr(entry.getValue()))
+                        .append(",");
             }
             stringBuffer.deleteCharAt(stringBuffer.length() - 1);    //删除最后的一个"&"
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return stringBuffer;
+        return stringBuffer.append("}");
+    }
+
+    public static String valStr(String v){
+        if (v.startsWith("{"))
+            return v;
+        return  "\""+v+"\"";
     }
 
     /*
