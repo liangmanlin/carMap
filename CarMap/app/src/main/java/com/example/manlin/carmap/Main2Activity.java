@@ -55,7 +55,7 @@ public class Main2Activity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String a = Base64.encodeToString("3141592654".getBytes(),1);
+                    String a = Base64.encodeToString("1".getBytes(),1);
                 String strName = name.getText().toString();
                 String b = Base64.encodeToString(pw.getText().toString().getBytes(),1);
                 boolean c = a.equals(b);

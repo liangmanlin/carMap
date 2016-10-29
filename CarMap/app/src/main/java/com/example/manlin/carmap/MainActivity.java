@@ -1,6 +1,9 @@
 package com.example.manlin.carmap;
 
 import android.app.ActivityManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -24,10 +27,15 @@ import android.widget.Toast;
 import com.baidu.trace.LBSTraceClient;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -129,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("获取设置");
             }
         });
-
+//        scanBlueTooth();
         startTrace();
     }
 
@@ -160,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
             for (Map.Entry<String, Integer> entry : global.getInstance().cfg.list()) {
                 intent.putExtra(entry.getKey(), entry.getValue());
             }
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setClass(context, MyService.class);
             context.startService(intent);
         }
@@ -203,12 +211,88 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+//    private void scanBlueTooth(){
+//        IntentFilter intentFilter = new IntentFilter();
+//        intentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+//        intentFilter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+//        intentFilter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
+//        intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+//        registerReceiver(msgReceive, intentFilter);
+//
+//        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+//        if(adapter.isEnabled()){
+//            //BluetoothAdapter.ACTION_REQUEST_ENABLE为启动蓝牙的action
+//            Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivity(intent);
+//        }
+//        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+//        //设置蓝牙可见性的时间，方法本身规定最多可见300秒
+//        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+//        startActivity(intent);
+//        TextView a = (TextView) findViewById(R.id.textView);
+//        a.setText("adfasdf");
+//        Set<BluetoothDevice> devices = adapter.getBondedDevices();
+//        adapter.startDiscovery();
+//        if(devices.size()>0) {
+//            for(Iterator iterator = devices.iterator(); iterator.hasNext();) {
+//                BluetoothDevice device = (BluetoothDevice) iterator.next();
+//                try {
+//                    // 连接
+//                    connect(device,adapter);
+//                    a.setText("连接成功");
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    a.setText("连接失败"+device.getName());
+//                }
+//            }
+//        }
+//
+//    }
+//    private void connect(BluetoothDevice device,BluetoothAdapter adapter) throws IOException {
+        // 固定的UUID
+//        final String SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB";
+//        UUID uuid = UUID.fromString(SPP_UUID);
+//        BluetoothSocket socket = device.createRfcommSocketToServiceRecord(uuid);
+//        socket.connect();
+//        BluetoothSocket tmp;
+//        BluetoothSocket mmSocket;
+//        try {
+//            Method m = device.getClass().getMethod("createRfcommSocket", new Class[]{int.class});
+//            try{
+//                tmp = (BluetoothSocket)m.invoke(device, Integer.valueOf(2));
+//            }catch(Exception e){
+//                e.printStackTrace();
+//                return;
+//            }
+//        }catch(NoSuchMethodException e){
+//            e.printStackTrace();
+//            return;
+//        }
+//
+//        mmSocket = tmp;
+//        adapter.cancelDiscovery();
+//        try {
+//            mmSocket.connect();
+//        }catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
     public class MsgReceiver extends BroadcastReceiver{
         @Override
         public void onReceive(Context context,Intent intent){
-            String tmp = intent.getStringExtra("value");
-            System.out.println(tmp);
-            Toast.makeText(getApplicationContext(),tmp, Toast.LENGTH_SHORT).show();
+            String action = intent.getAction();
+            if(action.equals("com.example.manlin.carmap.REC_SERVICE")) {
+                String tmp = intent.getStringExtra("value");
+                System.out.println(tmp);
+                Toast.makeText(getApplicationContext(), tmp, Toast.LENGTH_SHORT).show();
+            }else if(BluetoothDevice.ACTION_FOUND.equals(action)){
+                BluetoothDevice devices = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                TextView a = (TextView) findViewById(R.id.textView);
+                a.setText(a.getText()+"\n"+devices.getAddress());
+            }else if(BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)){
+
+            }
         }
     }
 }

@@ -29,6 +29,11 @@ public class MyService extends Service {
     private final Handler handler = new Handler();
     private Runnable r ;
 
+    //公众号推送
+    private String access_token = "";
+    private int tokenGetTime = 0;
+    private boolean isSend = false;
+
     private int failNet = 0;
 
     // 轨迹服务
@@ -91,11 +96,11 @@ public class MyService extends Service {
             @Override
             public void run() {
                 checkNetWork();
-                handler.postDelayed(this,30000);
+                handler.postDelayed(this,10000);
             }
         };
-        handler.postDelayed(r,30000);
-        return super.onStartCommand(intent, START_STICKY, startId);
+        handler.postDelayed(r,10000);
+        return super.onStartCommand(intent, START_NOT_STICKY, startId);
     }
 
     //被销毁时反注册广播接收器
@@ -104,7 +109,7 @@ public class MyService extends Service {
         unregisterReceiver(msgReceive);
         super.onDestroy();
         handler.removeCallbacks(r);
-        stopTrace();
+        //stopTrace();
     }
 
     /**
@@ -146,9 +151,9 @@ public class MyService extends Service {
         // 通过轨迹服务客户端client停止轨迹服务
         //LogUtil.i(TAG, "stopTrace(), isTraceStart : " + isTraceStart);
 
-        if(isTraceStart){
-            client.stopTrace(trace, stopTraceListener);
-        }
+
+        client.stopTrace(trace, stopTraceListener);
+
     }
 
     // 初始化监听器
@@ -194,7 +199,7 @@ public class MyService extends Service {
             public void onStopTraceSuccess() {
                 System.out.println("停止轨迹服务成功");
                 isTraceStart = false;
-                //stopSelf();
+                stopSelf();
             }
 
             // 轨迹服务停止失败（arg0 : 错误编码，arg1 : 消息内容，详情查看类参考）
@@ -255,18 +260,22 @@ public class MyService extends Service {
                 Toast.makeText(getApplicationContext(), "网络连接成功，启动鹰眼服务", Toast.LENGTH_SHORT).show();
                 init();
             }
+            if(!isSend){
+                SendWXMsg();
+            }
             failNet = 0;
         }else{
             failNet++;
-            if(failNet >= 3){
-                if(isTraceStart) {
-                    Toast.makeText(getApplicationContext(), "无网络，关闭鹰眼服务", Toast.LENGTH_SHORT).show();
-                    stopTrace();
-                }
-                failNet = 0;
+            if(failNet >= 3) {
+                Toast.makeText(getApplicationContext(), "无网络，关闭鹰眼服务", Toast.LENGTH_SHORT).show();
+                stopTrace();
             }
 
         }
+    }
+
+    private void SendWXMsg(){
+        String rul = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN";
     }
 
 
